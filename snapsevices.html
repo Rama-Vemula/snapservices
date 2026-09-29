@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snap Services - Service Booking & Mentor Verification Network</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React & ReactDOM CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Babel Standalone for JSX compilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons UMD -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      display: flex;
+      width: 200%;
+      animation: marquee 25s linear infinite;
+    }
+    .animate-marquee:hover {
+      animation-play-state: paused;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-[#6257ff] selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    const Icon = ({ name, className = "w-5 h-5", ...props }) => {
+      const containerRef = useRef(null);
+
+      useEffect(() => {
+        if (containerRef.current && window.lucide && window.lucide.icons) {
+          const pascalName = name;
+          const iconDef = window.lucide.icons[pascalName] || window.lucide.icons['HelpCircle'];
+          
+          if (iconDef) {
+            const svgElement = window.lucide.createElement(iconDef);
+            if (className) {
+              svgElement.setAttribute('class', className);
+            }
+            containerRef.current.innerHTML = '';
+            containerRef.current.appendChild(svgElement);
+          }
+        }
+      }, [name, className]);
+
+      return <span ref={containerRef} className="inline-flex items-center justify-center" {...props} />;
+    };
+
+    const CITIES = [
+      "Hyderabad", "Visakhapatnam", "Vijayawada", "Tirupati", "Guntur",
+      "Chennai", "Bangalore", "Mumbai", "Delhi", "Kolkata", "Pune",
+      "Ahmedabad", "Jaipur", "Kochi", "Rural & Village Regions"
+    ];
+
+    const ALL_SERVICES = [
+      { 
+        id: 's1', 
+        name: 'Electrical Repair & Wiring', 
+        category: 'Electrical', 
+        icon: 'Zap', 
+        basePrice: 299, 
+        rating: 4.8, 
+        image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
+        description: 'Complete home electrical inspection, short-circuit fixes, DB box installation, and full wiring.' 
+      },
+      { 
+        id: 's2', 
+        name: 'Plumbing & Pipe Leakage', 
+        category: 'Plumbing', 
+        icon: 'Droplet', 
+        basePrice: 249, 
+        rating: 4.9, 
+        image: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=800&q=80',
+        description: 'Fixing water leaks, tap replacement, pipe clogging clearance, and modern bathroom fitting installation.' 
+      },
+      { 
+        id: 's3', 
+        name: 'AC Servicing & Gas Refill', 
+        category: 'AC Care', 
+        icon: 'Flame', 
+        basePrice: 599, 
+        rating: 4.7, 
+        image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=800&q=80',
+        description: 'Deep foam cleaning, coil jet washing, refrigerant gas top-up, and cooling performance optimization.' 
+      },
+      { 
+        id: 's4', 
+        name: 'Deep Home Cleaning', 
+        category: 'Cleaning', 
+        icon: 'Sparkles', 
+        basePrice: 1499, 
+        rating: 4.9, 
+        image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80',
+        description: 'Full house deep sanitation, floor machine scrubbing, window glass cleaning, and dust removal.' 
+      },
+      { 
+        id: 's5', 
+        name: 'Pest Control & Termite Spray', 
+        category: 'Pest Control', 
+        icon: 'Bug', 
+        basePrice: 899, 
+        rating: 4.6, 
+        image: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=800&q=80',
+        description: 'Safe chemical spray for termites, cockroaches, mosquitoes, and rodents.' 
+      },
+      { 
+        id: 's6', 
+        name: 'Carpentry & Furniture Assembly', 
+        category: 'Carpentry', 
+        icon: 'Hammer', 
+        basePrice: 349, 
+        rating: 4.8, 
+        image: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=800&q=80',
+        description: 'Door hinge fixes, furniture custom assembly, lock installations, and wood polish touches.' 
+      },
+      { 
+        id: 's7', 
+        name: 'House Painting & Waterproofing', 
+        category: 'Painting', 
+        icon: 'Paintbrush', 
+        basePrice: 1999, 
+        rating: 4.9, 
+        image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=800&q=80',
+        description: 'Interior & exterior wall paint touchups, wall putty application, and damp leak waterproofing.' 
+      },
+      { 
+        id: 's8', 
+        name: 'Sofa & Upholstery Cleaning', 
+        category: 'Cleaning', 
+        icon: 'Sparkles', 
+        basePrice: 699, 
+        rating: 4.7, 
+        image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=800&q=80',
+        description: 'Shampoo washing, vacuuming, stain removal, and sanitization for sofas & carpets.' 
+      }
+    ];
+
+    const generateWorkersForService = (serviceId, cityName) => {
+      const workerPool = [
+        { name: "Ramu K.", avatar: 11, phone: "+91 9848012345", edu: "Non-Educated (assisted by Mentor)" },
+        { name: "Suresh Sharma", avatar: 12, phone: "+91 9849201122", edu: "Vocational Diploma" },
+        { name: "Venkatesh Rao", avatar: 13, phone: "+91 9700112233", edu: "Secondary Education" },
+        { name: "Praveen Reddy", avatar: 14, phone: "+91 9888223344", edu: "Primary Schooling" },
+        { name: "Anil Varma", avatar: 15, phone: "+91 9955443322", edu: "Non-Educated (assisted by Mentor)" },
+        { name: "Ramesh Naidu", avatar: 16, phone: "+91 9811223344", edu: "Vocational Diploma" },
+        { name: "Karthik Raja", avatar: 17, phone: "+91 9744556677", edu: "Secondary Education" },
+        { name: "Manish Patel", avatar: 18, phone: "+91 9833445566", edu: "Primary Schooling" },
+        { name: "Sunil Joshi", avatar: 19, phone: "+91 9922334455", edu: "Non-Educated (assisted by Mentor)" },
+        { name: "Ganesh Naik", avatar: 20, phone: "+91 9811002233", edu: "Vocational Diploma" },
+        { name: "Satish Kumar", avatar: 21, phone: "+91 9700998877", edu: "Secondary Education" },
+        { name: "Vijay Mohan", avatar: 22, phone: "+91 9844112233", edu: "Primary Schooling" }
+      ];
+
+      return workerPool.map((worker, index) => {
+        const seed = (serviceId.charCodeAt(1) || 1) + index * 5 + cityName.length;
+        const rating = (4.4 + (seed % 6) * 0.1).toFixed(1);
+        const hourlyRate = 250 + (seed % 6) * 50;
+
+        return {
+          id: `w-${serviceId}-${index + 1}`,
+          name: worker.name,
+          education: worker.edu,
+          photo: `https://i.pravatar.cc/150?img=${worker.avatar}`,
+          phone: worker.phone,
+          rating: parseFloat(rating),
+          experienceYears: 3 + (seed % 9),
+          ratePerHour: hourlyRate,
+          city: cityName,
+          area: `${cityName} Sector ${(index % 5) + 1}`,
+          policeVerificationStatus: 'Clear',
+          skillAssessmentScore: 80 + (seed % 20),
+          mentorApproved: true,
+          mentorName: 'Dr. Srinivas Rao',
+          available: true,
+          bio: `Verified home service technician with expertise in local residential solutions.`
+        };
+      });
+    };
+
+    const INITIAL_WORKERS = [
+      {
+        id: 'w-101',
+        name: 'Ramu K.',
+        education: 'Non-Educated (assisted by Mentor)',
+        serviceCategory: 'Plumbing',
+        experienceYears: 6,
+        phone: '+91 9848012345',
+        photo: 'https://i.pravatar.cc/150?img=11',
+        policeVerificationStatus: 'Clear',
+        skillAssessmentScore: 92,
+        mentorApproved: true,
+        mentorName: 'Dr. Srinivas Rao',
+        ratePerHour: 300,
+        city: 'Hyderabad',
+        rating: 4.9,
+        available: true,
+        bio: 'Expert plumber trained in local underground water fittings and leak sealing.'
+      },
+      {
+        id: 'w-102',
+        name: 'Suresh Kumar',
+        education: 'Vocational Diploma',
+        serviceCategory: 'Electrical',
+        experienceYears: 4,
+        phone: '+91 9701234567',
+        photo: 'https://i.pravatar.cc/150?img=12',
+        policeVerificationStatus: 'Pending Verification',
+        skillAssessmentScore: 78,
+        mentorApproved: false,
+        mentorName: 'Anita Sharma',
+        ratePerHour: 250,
+        city: 'Hyderabad',
+        rating: 4.5,
+        available: false,
+        bio: 'Certified wireman for residential house switchboards and circuit breakers.'
+      },
+      {
+        id: 'w-103',
+        name: 'Babu Rao',
+        education: 'Non-Educated (assisted by Mentor)',
+        serviceCategory: 'Carpentry',
+        experienceYears: 8,
+        phone: '+91 9123456789',
+        photo: 'https://i.pravatar.cc/150?img=15',
+        policeVerificationStatus: 'Clear',
+        skillAssessmentScore: 88,
+        mentorApproved: true,
+        mentorName: 'Dr. Srinivas Rao',
+        ratePerHour: 350,
+        city: 'Hyderabad',
+        rating: 4.8,
+        available: true,
+        bio: 'Master woodworker proficient in door locks, cabinets, and custom furniture assembly.'
+      },
+      {
+        id: 'w-104',
+        name: 'Venkat Naidu',
+        education: 'Primary Schooling',
+        serviceCategory: 'AC Care',
+        experienceYears: 5,
+        phone: '+91 9885098765',
+        photo: 'https://i.pravatar.cc/150?img=33',
+        policeVerificationStatus: 'Flagged / Criminal Record',
+        skillAssessmentScore: 82,
+        mentorApproved: false,
+        mentorName: 'Kiran Verma',
+        ratePerHour: 400,
+        city: 'Hyderabad',
+        rating: 4.2,
+        available: false,
+        bio: 'AC technician capable of split/window gas refills and compressor servicing.'
+      }
+    ];
+
+    function App() {
+      const [currentPortalRole, setCurrentPortalRole] = useState('consumer'); // 'consumer' or 'mentor'
+      const [activeTab, setActiveTab] = useState('home');
+      const [showLoginModal, setShowLoginModal] = useState(false);
+      const [selectedCity, setSelectedCity] = useState('Hyderabad');
+
+      const [searchQuery, setSearchQuery] = useState('');
+      const [selectedCategory, setSelectedCategory] = useState('All');
+
+      const [user, setUser] = useState({
+        id: 'CUST-8831',
+        name: 'Alexander Wright',
+        email: 'alex.wright@snapservices.in',
+        phone: '+91 9876543210',
+        role: 'Customer',
+        city: 'Hyderabad',
+        address: 'Plot 42, Jubilee Hills, Road No. 36',
+        membership: 'Snap Premium Member',
+        totalOrdersCount: 8,
+        rating: 4.95,
+        isLoggedIn: true
+      });
+
+      const [workerDatabase, setWorkerDatabase] = useState(INITIAL_WORKERS);
+
+      const [activeServiceForWorkers, setActiveServiceForWorkers] = useState(null);
+      const [selectedWorkers, setSelectedWorkers] = useState([]);
+      const [selectedWorkerForDetails, setSelectedWorkerForDetails] = useState(null);
+      const [selectedWorkerForBooking, setSelectedWorkerForBooking] = useState(null);
+      const [selectedCustomerForModal, setSelectedCustomerForModal] = useState(null);
+
+      const [bookingDetails, setBookingDetails] = useState({
+        date: new Date().toISOString().split('T')[0],
+        timeSlot: '10:00 AM - 12:00 PM',
+        address: 'Plot 42, Jubilee Hills, Road No. 36',
+        notes: ''
+      });
+
+      const [orders, setOrders] = useState([
+        {
+          id: 'ORD-98214',
+          serviceName: 'Plumbing & Pipe Leakage',
+          customerName: 'Alexander Wright',
+          customerPhone: '+91 9876543210',
+          customerEmail: 'alex.wright@snapservices.in',
+          customerAddress: 'Plot 42, Jubilee Hills, Road No. 36, Hyderabad',
+          workerName: 'Ramu K.',
+          workerPhoto: 'https://i.pravatar.cc/150?img=11',
+          workerPhone: '+91 9848012345',
+          area: 'Jubilee Hills, Hyderabad',
+          location: 'Plot 42, Jubilee Hills, Hyderabad',
+          date: '2026-10-02',
+          timeSlot: '10:00 AM - 12:00 PM',
+          price: 549,
+          status: 'Scheduled',
+          category: 'Plumbing'
+        }
+      ]);
+
+      const [toastMessage, setToastMessage] = useState(null);
+
+      const showNotification = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4000);
+      };
+
+      const categoriesList = useMemo(() => {
+        return ['All', ...new Set(ALL_SERVICES.map(s => s.category))];
+      }, []);
+
+      const filteredServices = useMemo(() => {
+        return ALL_SERVICES.filter(service => {
+          const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                service.category.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchesCategory = selectedCategory === 'All' || service.category === selectedCategory;
+          return matchesSearch && matchesCategory;
+        });
+      }, [searchQuery, selectedCategory]);
+
+      const handleConfirmBooking = (e) => {
+        e.preventDefault();
+        if (!selectedWorkerForBooking || !activeServiceForWorkers) return;
+
+        const newOrder = {
+          id: `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
+          serviceName: activeServiceForWorkers.name,
+          customerName: user.name,
+          customerPhone: user.phone,
+          customerEmail: user.email,
+          customerAddress: `${bookingDetails.address}, ${selectedCity}`,
+          workerName: selectedWorkerForBooking.name,
+          workerPhoto: selectedWorkerForBooking.photo,
+          workerPhone: selectedWorkerForBooking.phone,
+          area: selectedWorkerForBooking.area || selectedCity,
+          location: `${bookingDetails.address}, ${selectedCity}`,
+          date: bookingDetails.date,
+          timeSlot: bookingDetails.timeSlot || '10:00 AM - 12:00 PM',
+          price: activeServiceForWorkers.basePrice + selectedWorkerForBooking.ratePerHour,
+          status: 'Scheduled',
+          category: activeServiceForWorkers.category
+        };
+
+        setOrders([newOrder, ...orders]);
+        setSelectedWorkerForBooking(null);
+        setSelectedWorkerForDetails(null);
+        setSelectedWorkers([]);
+        setActiveServiceForWorkers(null);
+        showNotification(`Order #${newOrder.id} successfully booked with ${newOrder.workerName}!`);
+        setActiveTab('orders');
+      };
+
+      const handleApproveWorkerByMentor = (workerId) => {
+        setWorkerDatabase(prev => prev.map(w => {
+          if (w.id === workerId) {
+            return {
+              ...w,
+              policeVerificationStatus: 'Clear',
+              mentorApproved: true
+            };
+          }
+          return w;
+        }));
+        showNotification(`Worker #${workerId} approved & verified successfully!`);
+      };
+
+      const handleRejectWorkerByMentor = (workerId, reason) => {
+        setWorkerDatabase(prev => prev.map(w => {
+          if (w.id === workerId) {
+            return {
+              ...w,
+              policeVerificationStatus: 'Flagged / Rejected',
+              mentorApproved: false
+            };
+          }
+          return w;
+        }));
+        showNotification(`Worker #${workerId} rejected due to: ${reason}`);
+      };
+
+      const handleAddNewWorkerByMentor = (newWorkerObj) => {
+        setWorkerDatabase([newWorkerObj, ...workerDatabase]);
+        showNotification(`New worker ${newWorkerObj.name} successfully onboarded and assigned!`);
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-[#6257ff] selection:text-white pb-16">
+          
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="fixed top-20 right-6 z-50 bg-[#6257ff] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-indigo-400/30 animate-bounce">
+              <Icon className="w-5 h-5 text-emerald-300" name="CheckCircle2"/>
+              <span className="text-sm font-semibold">{toastMessage}</span>
+            </div>
+          )}
+
+          {/* Header Bar */}
+          <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 px-4 lg:px-12 py-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('home')}>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6257ff] to-[#ff725e] flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <Icon className="w-6 h-6 text-white" name="Zap"/>
+                </div>
+                <div>
+                  <span className="text-xl font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-[#ff725e] bg-clip-text text-transparent">
+                    SNAP<span className="text-[#6257ff]">SERVICES</span>
+                  </span>
+                  <span className="block text-[10px] text-slate-400 font-medium tracking-wider -mt-1 uppercase">Mentor & Worker Hub</span>
+                </div>
+              </div>
+
+              {/* City Selector */}
+              <div className="hidden md:flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl">
+                <Icon className="w-4 h-4 text-[#ff725e]" name="MapPin"/>
+                <select
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  className="bg-transparent text-xs font-semibold text-slate-100 focus:outline-none cursor-pointer"
+                >
+                  {CITIES.map(c => (
+                    <option key={c} value={c} className="bg-slate-900 text-white">{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* System Switcher Pill */}
+              <div className="bg-slate-900 p-1 rounded-2xl border border-slate-800 flex items-center gap-1">
+                <button
+                  onClick={() => { setCurrentPortalRole('consumer'); setActiveTab('home'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    currentPortalRole === 'consumer' ? 'bg-[#6257ff] text-white shadow-md' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" name="User"/>
+                  <span>Customer View</span>
+                </button>
+                <button
+                  onClick={() => { setCurrentPortalRole('mentor'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    currentPortalRole === 'mentor' ? 'bg-[#ff725e] text-white shadow-md' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" name="UserCheck"/>
+                  <span>Mentor Verification Portal</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation for Customer View */}
+            {currentPortalRole === 'consumer' && (
+              <nav className="hidden lg:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-full border border-slate-800">
+                {[
+                  { id: 'home', label: 'Home', icon: 'Home' },
+                  { id: 'services', label: 'Services', icon: 'Wrench' },
+                  { id: 'orders', label: 'Orders', icon: 'ShoppingBag', badge: orders.filter(o => o.status === 'Scheduled').length },
+                  { id: 'help', label: 'Help', icon: 'HelpCircle' },
+                  { id: 'policy', label: 'Policy', icon: 'FileText' },
+                ].map((item) => {
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`relative flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 ${
+                        isActive
+                          ? 'bg-[#6257ff] text-white shadow-md shadow-indigo-500/30'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" name={item.icon}/>
+                      {item.label}
+                      {item.badge > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-[#ff725e] text-white rounded-full font-bold">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+
+            {/* Login / Profile Controls */}
+            <div className="flex items-center gap-3">
+              {user.isLoggedIn ? (
+                <div
+                  onClick={() => setSelectedCustomerForModal(user)}
+                  className="flex items-center gap-3 bg-slate-900/80 p-1.5 pr-4 rounded-full border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition-colors"
+                >
+                  <img
+                    src={currentPortalRole === 'consumer' ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" : "https://i.pravatar.cc/150?img=60"}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover border border-indigo-500/50"
+                  />
+                  <div className="text-left hidden sm:block">
+                    <p className="text-xs font-bold text-slate-200">
+                      {currentPortalRole === 'consumer' ? user.name : 'Dr. Srinivas Rao'}
+                    </p>
+                    <p className="text-[10px] text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      {currentPortalRole === 'consumer' ? `${user.role} Account` : 'Authorized Mentor'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUser({ ...user, isLoggedIn: false });
+                    }}
+                    className="text-slate-400 hover:text-rose-400 p-1 rounded-lg transition-colors ml-1"
+                    title="Logout"
+                  >
+                    <Icon className="w-4 h-4" name="LogOut"/>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white px-5 py-2.5 rounded-full font-semibold text-xs transition-all shadow-lg"
+                >
+                  Sign In Portal
+                </button>
+              )}
+            </div>
+          </header>
+
+          <main className="max-w-7xl mx-auto px-4 lg:px-8 pt-6">
+            {currentPortalRole === 'mentor' ? (
+              <MentorDashboardView onAddNewWorker={handleAddNewWorkerByMentor} onApprove={handleApproveWorkerByMentor} onReject={handleRejectWorkerByMentor} servicesList={ALL_SERVICES} workerDatabase={workerDatabase}/>
+            ) : (
+              <>
+                {activeTab === 'home' && (
+                  <HomePageView orders={orders} selectedCity={selectedCity} setActiveTab={setActiveTab} setSelectedCategory={setSelectedCategory} setSelectedCity={setSelectedCity} setSelectedCustomerForModal={setSelectedCustomerForModal} onSelectService={(s) => {
+                      setActiveServiceForWorkers(s);
+                      setSelectedWorkers([]);
+                    }}
+                  />
+                )}
+
+                {activeTab === 'services' && (
+                  <ServicesPageView categoriesList={categoriesList} filteredServices={filteredServices} searchQuery={searchQuery} selectedCategory={selectedCategory} selectedCity={selectedCity} setSearchQuery={setSearchQuery} setSelectedCategory={setSelectedCategory} setSelectedCity={setSelectedCity} onSelectService={(service) => {
+                      setActiveServiceForWorkers(service);
+                      setSelectedWorkers([]);
+                    }}
+                  />
+                )}
+
+                {activeTab === 'orders' && (
+                  <OrdersPageView orders={orders} selectedCity={selectedCity} setSelectedCustomerForModal={setSelectedCustomerForModal} onCancelOrder={(id) => setOrders(orders.map(o => o.id === id ? { ...o, status: 'Cancelled' } : o))}
+                  />
+                )}
+
+                {activeTab === 'help' && <HelpPageView/>}
+                {activeTab === 'policy' && <PolicyPageView/>}
+              </>
+            )}
+          </main>
+
+          {/* Customer Modal Views */}
+          {activeServiceForWorkers && !selectedWorkerForBooking && currentPortalRole === 'consumer' && (
+            <WorkersListModal city={selectedCity} selectedWorkers={selectedWorkers} service={activeServiceForWorkers} setSelectedWorkers={setSelectedWorkers} workerDatabase={workerDatabase} onClose={() => {
+                setActiveServiceForWorkers(null);
+                setSelectedWorkers([]);
+              }}
+              onSelectWorker={(worker) => setSelectedWorkerForBooking(worker)}
+              onViewSelectedNext={(workers) => {
+                if (workers.length > 0) {
+                  setSelectedWorkerForDetails(workers[0]);
+                }
+              }}
+            />
+          )}
+
+          {selectedWorkerForDetails && currentPortalRole === 'consumer' && (
+            <WorkerDetailsModal selectedWorkers={selectedWorkers} worker={selectedWorkerForDetails} onClose={() => setSelectedWorkerForDetails(null)}
+              onSelectWorkerForDetails={(worker) => setSelectedWorkerForDetails(worker)}
+              onProceedToBooking={(worker) => setSelectedWorkerForBooking(worker)}
+            />
+          )}
+
+          {selectedWorkerForBooking && activeServiceForWorkers && currentPortalRole === 'consumer' && (
+            <BookingModal bookingDetails={bookingDetails} service={activeServiceForWorkers} setBookingDetails={setBookingDetails} worker={selectedWorkerForBooking} onClose={() => setSelectedWorkerForBooking(null)}
+              onSubmit={handleConfirmBooking}
+            />
+          )}
+
+          {/* CUSTOMER DETAILS MODAL */}
+          {selectedCustomerForModal && (
+            <CustomerDetailsModal customer={selectedCustomerForModal} onClose={() => setSelectedCustomerForModal(null)}
+            />
+          )}
+
+          {/* 3 PERSONS MULTI-ROLE LOGIN MODAL */}
+          {showLoginModal && (
+            <AnimatedLoginModal3D onClose={() => setShowLoginModal(false)}
+              onLoginSuccess={(userData) => {
+                setUser({
+                  ...user,
+                  ...userData,
+                  isLoggedIn: true
+                });
+                setShowLoginModal(false);
+                showNotification(`Authenticated as ${userData.name} (${userData.role})!`);
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // HOME PAGE VIEW COMPONENT
+    function HomePageView({ setActiveTab, setSelectedCategory, selectedCity, setSelectedCity, orders, setSelectedCustomerForModal, onSelectService }) {
+      return (
+        <div className="space-y-10 pb-12">
+          {/* Services Grid with Images */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <h2 className="text-3xl font-extrabold text-white">Our Home Services</h2>
+                <p className="text-xs text-slate-400">Select a service category to view available technician profiles in {selectedCity}</p>
+              </div>
+              <span className="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">
+                {ALL_SERVICES.length} Categories Active
+              </span>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {ALL_SERVICES.map((service) => (
+                <div 
+                  key={service.id} 
+                  className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden group hover:border-indigo-500/50 transition-all duration-300 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="relative h-48 overflow-hidden">
+                      <img 
+                        src={service.image} 
+                        alt={service.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                      <span className="absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full font-bold border border-slate-700 flex items-center gap-1">
+                        ⭐ {service.rating}
+                      </span>
+                    </div>
+
+                    <div className="p-5 space-y-2">
+                      <h3 className="font-extrabold text-white text-lg">{service.name}</h3>
+                      <p className="text-xs text-slate-400 leading-relaxed">{service.description}</p>
+                    </div>
+                  </div>
+
+                  <div className="px-5 pb-5 pt-3 border-t border-slate-800/80 flex items-center justify-between mt-auto">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Base Price From</span>
+                      <span className="font-black text-lg text-white">₹{service.basePrice}</span>
+                    </div>
+                    <button
+                      onClick={() => onSelectService(service)}
+                      className="bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-lg hover:opacity-90 transition-opacity"
+                    >
+                      View Workers (12)
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Active Bookings Summary */}
+          <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+            <h3 className="text-xl font-bold text-white">Active Service Bookings</h3>
+            {orders.map((o) => (
+              <div key={o.id} className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    {o.id}
+                  </span>
+                  <h4 className="font-extrabold text-white text-base">{o.serviceName}</h4>
+                  <p className="text-xs text-slate-400">Assigned Technician: <span className="text-slate-200 font-semibold">{o.workerName} ({o.workerPhone})</span></p>
+                  <p className="text-xs text-slate-400">Area: {o.area || o.location} • Date: {o.date}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400">Total Charged</p>
+                    <p className="text-lg font-black text-white">₹{o.price}</p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedCustomerForModal({
+                      id: 'CUST-8831',
+                      name: o.customerName || 'Alexander Wright',
+                      email: o.customerEmail || 'alex.wright@snapservices.in',
+                      phone: o.customerPhone || '+91 9876543210',
+                      address: o.customerAddress || o.location,
+                      city: selectedCity,
+                      membership: 'Snap Premium Member',
+                      totalOrdersCount: 8,
+                      rating: 4.95
+                    })}
+                    className="bg-slate-800 text-slate-200 hover:text-white px-4 py-2 rounded-xl text-xs font-bold border border-slate-700"
+                  >
+                    Customer Record
+                  </button>
+                </div>
+              </div>
+            ))}
+          </section>
+        </div>
+      );
+    }
+
+    // SERVICES PAGE VIEW COMPONENT
+    function ServicesPageView({ searchQuery, setSearchQuery, selectedCategory, setSelectedCategory, selectedCity, setSelectedCity, categoriesList, filteredServices, onSelectService }) {
+      return (
+        <div className="space-y-6 pb-12">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900 border border-slate-800 p-4 rounded-3xl">
+            <div className="relative w-full md:w-96">
+              <Icon className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" name="Search"/>
+              <input
+                type="text"
+                placeholder="Search services or categories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-11 pr-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-[#6257ff]"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto scrollbar-none pb-2 md:pb-0">
+              {categoriesList.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${
+                    selectedCategory === cat ? 'bg-[#6257ff] text-white shadow-md' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredServices.map((service) => (
+              <div key={service.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden group hover:border-indigo-500/50 transition-all duration-300 flex flex-col justify-between">
+                <div>
+                  <div className="relative h-48 overflow-hidden">
+                    <img src={service.image} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                    <span className="absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full font-bold border border-slate-700 flex items-center gap-1">
+                      ⭐ {service.rating}
+                    </span>
+                  </div>
+                  <div className="p-5 space-y-2">
+                    <h3 className="font-extrabold text-white text-lg">{service.name}</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">{service.description}</p>
+                  </div>
+                </div>
+                <div className="px-5 pb-5 pt-3 border-t border-slate-800/80 flex items-center justify-between mt-auto">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Base Price From</span>
+                    <span className="font-black text-lg text-white">₹{service.basePrice}</span>
+                  </div>
+                  <button
+                    onClick={() => onSelectService(service)}
+                    className="bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-lg hover:opacity-90 transition-opacity"
+                  >
+                    View Workers (12)
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ORDERS PAGE VIEW COMPONENT
+    function OrdersPageView({ orders, selectedCity, setSelectedCustomerForModal, onCancelOrder }) {
+      return (
+        <div className="space-y-6 pb-12">
+          <h2 className="text-2xl font-extrabold text-white">Your Booked Orders</h2>
+          <div className="space-y-4">
+            {orders.map((o) => (
+              <div key={o.id} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <img src={o.workerPhoto || 'https://i.pravatar.cc/150?img=11'} alt={o.workerName} className="w-16 h-16 rounded-2xl object-cover border border-indigo-500/30" />
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      {o.id} • {o.status}
+                    </span>
+                    <h4 className="font-extrabold text-white text-lg">{o.serviceName}</h4>
+                    <p className="text-xs text-slate-400">Technician: <span className="text-slate-200 font-semibold">{o.workerName} ({o.workerPhone})</span></p>
+                    <p className="text-xs text-slate-400">Scheduled: {o.date} at {o.timeSlot}</p>
+                    <p className="text-xs text-slate-400">Location: {o.location || o.customerAddress}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:items-end gap-3 w-full md:w-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
+                  <div className="md:text-right">
+                    <span className="text-xs text-slate-400">Total Charged</span>
+                    <p className="text-xl font-black text-emerald-400">₹{o.price}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {setSelectedCustomerForModal && (
+                      <button
+                        onClick={() => setSelectedCustomerForModal({
+                          id: 'CUST-8831',
+                          name: o.customerName || 'Alexander Wright',
+                          email: o.customerEmail || 'alex.wright@snapservices.in',
+                          phone: o.customerPhone || '+91 9876543210',
+                          address: o.customerAddress || o.location,
+                          city: selectedCity || 'Hyderabad',
+                          membership: 'Snap Premium Member',
+                          totalOrdersCount: 8,
+                          rating: 4.95
+                        })}
+                        className="bg-slate-800 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700"
+                      >
+                        Profile
+                      </button>
+                    )}
+                    {o.status === 'Scheduled' && (
+                      <button
+                        onClick={() => onCancelOrder(o.id)}
+                        className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 px-3.5 py-2 rounded-xl text-xs font-bold border border-rose-500/20"
+                      >
+                        Cancel Booking
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // HELP PAGE VIEW COMPONENT
+    function HelpPageView() {
+      return (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 space-y-6 max-w-3xl mx-auto my-6">
+          <h2 className="text-2xl font-extrabold text-white">Help & Customer Support</h2>
+          <div className="space-y-4 text-xs text-slate-300">
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              <h4 className="font-bold text-white text-sm mb-1">How does Snap Services verify workers?</h4>
+              <p className="text-slate-400">All registered workers are thoroughly vetted by authorized mentors. Verification includes background police checks, skill evaluation assessments, and identity authentication.</p>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              <h4 className="font-bold text-white text-sm mb-1">How can I pay for my booked service?</h4>
+              <p className="text-slate-400">You can pay directly via UPI, cards, or cash after service completion. Total billing estimations are transparently generated before confirmation.</p>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              <h4 className="font-bold text-white text-sm mb-1">Contact Support Helpline</h4>
+              <p className="text-slate-400">Email: support@snapservices.in | Phone: +91 1800-123-4567</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // POLICY PAGE VIEW COMPONENT
+    function PolicyPageView() {
+      return (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 space-y-6 max-w-3xl mx-auto my-6">
+          <h2 className="text-2xl font-extrabold text-white">Platform Rules & Safety Policy</h2>
+          <div className="space-y-4 text-xs text-slate-300">
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+              <h4 className="font-bold text-emerald-400 text-sm">Rule 1: Strict Police Verification Clearance</h4>
+              <p className="text-slate-400">Technicians with pending background flags or active criminal records are permanently barred from accepting bookings on our platform.</p>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+              <h4 className="font-bold text-indigo-400 text-sm">Rule 2: Minimum Practical Skill Score</h4>
+              <p className="text-slate-400">Workers must score at least 70% in domain-specific practical test evaluations overseen by authorized academic and industry mentors.</p>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+              <h4 className="font-bold text-amber-400 text-sm">Rule 3: Inclusive Rural & Non-Educated Worker Program</h4>
+              <p className="text-slate-400">Skilled non-formal workers are mentored directly to ensure digitized job access while maintaining rigorous service safety standards.</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // MENTOR DASHBOARD COMPONENT
+    function MentorDashboardView({ workerDatabase, onApprove, onReject, onAddNewWorker, servicesList }) {
+      const [showOnboardModal, setShowOnboardModal] = useState(false);
+      const [filterRuleStatus, setFilterRuleStatus] = useState('All');
+
+      const [newWorkerForm, setNewWorkerForm] = useState({
+        name: '',
+        education: 'Non-Educated (assisted by Mentor)',
+        serviceCategory: 'Plumbing',
+        experienceYears: 3,
+        phone: '+91 ',
+        policeVerificationStatus: 'Clear',
+        skillAssessmentScore: 85,
+        ratePerHour: 300,
+        city: 'Hyderabad',
+        bio: ''
+      });
+
+      const filteredWorkers = useMemo(() => {
+        return workerDatabase.filter(w => {
+          if (filterRuleStatus === 'Pending') return !w.mentorApproved && w.policeVerificationStatus !== 'Flagged / Criminal Record';
+          if (filterRuleStatus === 'Flagged') return w.policeVerificationStatus.includes('Flagged');
+          if (filterRuleStatus === 'Approved') return w.mentorApproved;
+          return true;
+        });
+      }, [workerDatabase, filterRuleStatus]);
+
+      const handleCreateWorkerSubmit = (e) => {
+        e.preventDefault();
+        const createdWorker = {
+          ...newWorkerForm,
+          id: `w-${Math.floor(100 + Math.random() * 900)}`,
+          photo: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50)}`,
+          mentorApproved: newWorkerForm.policeVerificationStatus === 'Clear' && newWorkerForm.skillAssessmentScore >= 70,
+          mentorName: 'Dr. Srinivas Rao',
+          rating: 4.8,
+          available: true
+        };
+        onAddNewWorker(createdWorker);
+        setShowOnboardModal(false);
+      };
+
+      return (
+        <div className="space-y-8 pb-12">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 p-6 lg:p-8 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-2xl">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-2">
+                <Icon className="w-4 h-4 text-amber-400" name="ShieldAlert"/>
+                <span>Mentor Rules Compliance Portal</span>
+              </div>
+              <h1 className="text-3xl font-extrabold text-white">Worker Onboarding & Eligibility Verification</h1>
+              <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl">
+                Mentors evaluate non-educated and educated workers using strict background rules (police verification clearance, skill suitability tests, and identity checks) before assigning them to active services.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowOnboardModal(true)}
+              className="bg-gradient-to-r from-[#ff725e] to-[#ff523b] hover:opacity-95 text-white font-bold px-6 py-3.5 rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all shrink-0"
+            >
+              <Icon className="w-5 h-5" name="UserPlus"/>
+              <span>Onboard New Worker</span>
+            </button>
+          </div>
+
+          {/* Rules Banner */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                <Icon className="w-4 h-4" name="ShieldCheck"/> Rule 1: Police Background Check
+              </div>
+              <p className="text-xs text-slate-300">Must have zero criminal cases or active law enforcement flags.</p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+                <Icon className="w-4 h-4" name="Award"/> Rule 2: Skill Competency Test
+              </div>
+              <p className="text-xs text-slate-300">Minimum 70% rating required in practical domain skill evaluation.</p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                <Icon className="w-4 h-4" name="BookOpen"/> Rule 3: Mentor Assistance
+              </div>
+              <p className="text-xs text-slate-300">Special digital assistance provided for uneducated/rural skilled workers.</p>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase">Filter Status:</span>
+              {['All', 'Pending', 'Approved', 'Flagged'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setFilterRuleStatus(st)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    filterRuleStatus === st ? 'bg-[#6257ff] text-white' : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-slate-400">Total Workers: {filteredWorkers.length}</span>
+          </div>
+
+          {/* Worker Review Cards */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            {filteredWorkers.map((worker) => {
+              const satisfiesPoliceRule = worker.policeVerificationStatus === 'Clear';
+              const satisfiesSkillRule = worker.skillAssessmentScore >= 70;
+              const isEligible = satisfiesPoliceRule && satisfiesSkillRule;
+
+              return (
+                <div
+                  key={worker.id}
+                  className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={worker.photo}
+                          alt={worker.name}
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-slate-700"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-white text-base">{worker.name}</h3>
+                            <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                              {worker.education}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#ff725e] font-semibold mt-0.5">
+                            Category: {worker.serviceCategory} • {worker.experienceYears} Yrs Experience
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">Phone: {worker.phone}</p>
+                        </div>
+                      </div>
+
+                      <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                        worker.mentorApproved
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : worker.policeVerificationStatus.includes('Flagged')
+                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      }`}>
+                        {worker.mentorApproved ? 'Active / Approved' : worker.policeVerificationStatus.includes('Flagged') ? 'Flagged / Rejected' : 'Pending Mentor Review'}
+                      </span>
+                    </div>
+
+                    {/* Rule Evaluation Checklist */}
+                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-2.5">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Rule Verification Audit</h4>
+                      
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-300 flex items-center gap-2">
+                          <Icon className="w-4 h-4 text-slate-400" name="Shield"/>
+                          <span>Police Background Check:</span>
+                        </span>
+                        <span className={`font-bold ${satisfiesPoliceRule ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {worker.policeVerificationStatus}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-300 flex items-center gap-2">
+                          <Icon className="w-4 h-4 text-slate-400" name="Award"/>
+                          <span>Skill Practical Test Score:</span>
+                        </span>
+                        <span className={`font-bold ${satisfiesSkillRule ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {worker.skillAssessmentScore} / 100 {satisfiesSkillRule ? '(Passed)' : '(Failed < 70)'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
+                        <span className="text-slate-400">Assigned Mentor:</span>
+                        <span className="text-slate-200 font-semibold">{worker.mentorName}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions for Mentors */}
+                  <div className="pt-3 border-t border-slate-800 flex items-center gap-3">
+                    {!worker.mentorApproved ? (
+                      <>
+                        <button
+                          disabled={!isEligible}
+                          onClick={() => onApprove(worker.id)}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl text-xs transition"
+                        >
+                          Approve Worker
+                        </button>
+                        <button
+                          onClick={() => onReject(worker.id, "Failed background audit standards")}
+                          className="px-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold py-2.5 rounded-xl text-xs border border-rose-500/20 transition"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full flex items-center justify-between text-xs text-emerald-400 font-bold bg-emerald-500/10 py-2 px-4 rounded-xl border border-emerald-500/20">
+                        <span className="flex items-center gap-2"><Icon className="w-4 h-4" name="Check"/> Verified & Active on Customer Network</span>
+                        <span>₹{worker.ratePerHour}/hr</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ONBOARD NEW WORKER MODAL */}
+          {showOnboardModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-white">Onboard & Audit Worker</h3>
+                    <p className="text-xs text-slate-400">Mentor Verification Protocol</p>
+                  </div>
+                  <button onClick={() => setShowOnboardModal(false)} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+                    <Icon className="w-5 h-5" name="X"/>
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateWorkerSubmit} className="space-y-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Worker Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Naidu"
+                      value={newWorkerForm.name}
+                      onChange={(e) => setNewWorkerForm({ ...newWorkerForm, name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#6257ff]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300">Education Background</label>
+                      <select
+                        value={newWorkerForm.education}
+                        onChange={(e) => setNewWorkerForm({ ...newWorkerForm, education: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none"
+                      >
+                        <option value="Non-Educated (assisted by Mentor)">Non-Educated (Mentor Assisted)</option>
+                        <option value="Primary Schooling">Primary Schooling</option>
+                        <option value="Secondary Education">Secondary Education</option>
+                        <option value="Vocational Diploma">Vocational Diploma</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300">Service Category</label>
+                      <select
+                        value={newWorkerForm.serviceCategory}
+                        onChange={(e) => setNewWorkerForm({ ...newWorkerForm, serviceCategory: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none"
+                      >
+                        {servicesList.map(s => (
+                          <option key={s.id} value={s.category}>{s.category}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300">Police Check Status</label>
+                      <select
+                        value={newWorkerForm.policeVerificationStatus}
+                        onChange={(e) => setNewWorkerForm({ ...newWorkerForm, policeVerificationStatus: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none"
+                      >
+                        <option value="Clear">Clear (Passed Audit)</option>
+                        <option value="Pending Verification">Pending Verification</option>
+                        <option value="Flagged / Criminal Record">Flagged / Criminal Record</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300">Skill Test Score (0-100)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        required
+                        value={newWorkerForm.skillAssessmentScore}
+                        onChange={(e) => setNewWorkerForm({ ...newWorkerForm, skillAssessmentScore: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300">Phone Number</label>
+                      <input
+                        type="text"
+                        required
+                        value={newWorkerForm.phone}
+                        onChange={(e) => setNewWorkerForm({ ...newWorkerForm, phone: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300">Hourly Rate (₹)</label>
+                      <input
+                        type="number"
+                        required
+                        value={newWorkerForm.ratePerHour}
+                        onChange={(e) => setNewWorkerForm({ ...newWorkerForm, ratePerHour: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white font-bold py-3 rounded-2xl shadow-lg mt-2"
+                  >
+                    Submit & Evaluate Rules Onboarding
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // WORKERS LISTING MODAL (COMBINED WITH SELECTION & FULL 12 GENERATED WORKERS)
+    function WorkersListModal({ service, city, workerDatabase, selectedWorkers, setSelectedWorkers, onClose, onSelectWorker, onViewSelectedNext }) {
+      const generatedWorkers = useMemo(() => generateWorkersForService(service.id, city), [service, city]);
+      
+      const customWorkers = useMemo(() => {
+        return workerDatabase.filter(w => w.serviceCategory === service.category && w.mentorApproved);
+      }, [workerDatabase, service]);
+
+      const workers = useMemo(() => {
+        return [...customWorkers, ...generatedWorkers];
+      }, [customWorkers, generatedWorkers]);
+
+      const toggleSelectWorker = (worker) => {
+        if (selectedWorkers.some(w => w.id === worker.id)) {
+          setSelectedWorkers(selectedWorkers.filter(w => w.id !== worker.id));
+        } else {
+          if (selectedWorkers.length >= 3) return;
+          setSelectedWorkers([...selectedWorkers, worker]);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-extrabold text-white">{service.name} Technicians</h2>
+                <p className="text-xs text-slate-400">Showing Verified Workers in {city} (Select up to 3 for side-by-side evaluation)</p>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+                <Icon className="w-5 h-5" name="X"/>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto grid md:grid-cols-2 gap-4">
+              {workers.map((worker) => {
+                const isSelected = selectedWorkers.some(w => w.id === worker.id);
+
+                return (
+                  <div key={worker.id} className={`bg-slate-950 border p-4 rounded-2xl flex flex-col justify-between space-y-3 transition-all ${
+                    isSelected ? 'border-[#6257ff] ring-1 ring-[#6257ff]' : 'border-slate-800'
+                  }`}>
+                    <div className="flex items-center gap-4">
+                      <img src={worker.photo} alt={worker.name} className="w-14 h-14 rounded-2xl object-cover border border-indigo-500/30" />
+                      <div>
+                        <h4 className="font-bold text-white text-base">{worker.name}</h4>
+                        <p className="text-xs text-slate-400">{worker.area || worker.city}</p>
+                        <p className="text-xs text-emerald-400 font-semibold mt-0.5">⭐ {worker.rating} Rating • {worker.experienceYears} Yrs Exp</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Phone:</span>
+                        <span className="text-slate-200 font-semibold">{worker.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Hourly Rate:</span>
+                        <span className="text-white font-bold">₹{worker.ratePerHour}/hr</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleSelectWorker(worker)}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition ${
+                          isSelected ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/50' : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {isSelected ? 'Selected' : 'Compare (+)'}
+                      </button>
+                      <button
+                        onClick={() => onSelectWorker(worker)}
+                        className="flex-1 bg-[#6257ff] text-white py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-[#5044e4]"
+                      >
+                        Book Worker
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {selectedWorkers.length > 0 && (
+              <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-xs text-slate-300 font-semibold">{selectedWorkers.length} Worker(s) Selected for Evaluation</span>
+                <button
+                  onClick={() => onViewSelectedNext(selectedWorkers)}
+                  className="bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white px-5 py-2 rounded-xl text-xs font-bold"
+                >
+                  Review Details & Compare
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // WORKER DETAILS & COMPARISON MODAL
+    function WorkerDetailsModal({ worker, selectedWorkers, onClose, onSelectWorkerForDetails, onProceedToBooking }) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-extrabold text-white">Technician Full Profile</h3>
+                <p className="text-xs text-slate-400">Mentor Verified Professional Credentials</p>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+                <Icon className="w-5 h-5" name="X"/>
+              </button>
+            </div>
+
+            {selectedWorkers.length > 1 && (
+              <div className="px-6 pt-4 flex gap-2 overflow-x-auto">
+                {selectedWorkers.map((w) => (
+                  <button
+                    key={w.id}
+                    onClick={() => onSelectWorkerForDetails(w)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border shrink-0 ${
+                      w.id === worker.id ? 'bg-[#6257ff] text-white border-indigo-400' : 'bg-slate-950 text-slate-400 border-slate-800'
+                    }`}
+                  >
+                    <img src={w.photo} className="w-5 h-5 rounded-full object-cover" />
+                    <span>{w.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="p-6 space-y-6 overflow-y-auto">
+              <div className="flex items-center gap-5 bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                <img src={worker.photo} alt={worker.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500/40" />
+                <div className="space-y-1">
+                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Mentor Approved Technician
+                  </span>
+                  <h4 className="text-xl font-black text-white">{worker.name}</h4>
+                  <p className="text-xs text-slate-400">{worker.education} • {worker.experienceYears} Years Field Experience</p>
+                  <p className="text-xs text-amber-400 font-bold">⭐ {worker.rating} Rating Score</p>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4 text-xs">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <h5 className="font-bold text-slate-300">Background Verification</h5>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Police Check Status:</span>
+                    <span className="text-emerald-400 font-bold">{worker.policeVerificationStatus}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Skill Test Rating:</span>
+                    <span className="text-indigo-400 font-bold">{worker.skillAssessmentScore || 90}/100</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Assigned Mentor:</span>
+                    <span className="text-white font-bold">{worker.mentorName || 'Dr. Srinivas Rao'}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <h5 className="font-bold text-slate-300">Contact & Pricing</h5>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Phone Contact:</span>
+                    <span className="text-slate-200 font-semibold">{worker.phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Service Area:</span>
+                    <span className="text-slate-200 font-semibold">{worker.area || worker.city}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Hourly Rate:</span>
+                    <span className="text-emerald-400 font-extrabold text-sm">₹{worker.ratePerHour}/hr</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs space-y-1">
+                <h5 className="font-bold text-slate-300 mb-1">Worker Summary</h5>
+                <p className="text-slate-400 leading-relaxed">{worker.bio || 'Verified service technician with trained expertise in domestic fittings and fast troubleshooting.'}</p>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white">
+                Close
+              </button>
+              <button
+                onClick={() => onProceedToBooking(worker)}
+                className="bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg"
+              >
+                Proceed to Book {worker.name}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // BOOKING FORM MODAL
+    function BookingModal({ service, worker, bookingDetails, setBookingDetails, onClose, onSubmit }) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-white">Confirm Booking</h3>
+                <p className="text-xs text-slate-400">{service.name} with {worker.name}</p>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+                <Icon className="w-5 h-5" name="X"/>
+              </button>
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300">Service Address</label>
+                <input
+                  type="text"
+                  value={bookingDetails.address}
+                  onChange={(e) => setBookingDetails({ ...bookingDetails, address: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-[#6257ff] focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-300">Preferred Date</label>
+                  <input
+                    type="date"
+                    value={bookingDetails.date}
+                    onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-[#6257ff]"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-300">Total Estimation</label>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-emerald-400 font-bold">
+                    ₹{service.basePrice + worker.ratePerHour}
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white font-bold py-3 rounded-2xl shadow-lg">
+                Confirm & Schedule Service
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // CUSTOMER DETAILS MODAL
+    function CustomerDetailsModal({ customer, onClose }) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {customer.membership || 'Snap Verified User'}
+                </span>
+                <h3 className="text-lg font-extrabold text-white mt-1">Customer Profile Record</h3>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+                <Icon className="w-5 h-5" name="X"/>
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
+                  alt={customer.name}
+                  className="w-14 h-14 rounded-2xl object-cover border border-indigo-500/50"
+                />
+                <div>
+                  <h4 className="font-bold text-white text-base">{customer.name}</h4>
+                  <p className="text-slate-400">{customer.id} • Rating: ⭐ {customer.rating || 4.9}</p>
+                  <p className="text-emerald-400 font-semibold">{customer.totalOrdersCount || 8} Completed Bookings</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">Email Address:</span>
+                  <span className="text-white font-semibold">{customer.email}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">Phone Number:</span>
+                  <span className="text-white font-semibold">{customer.phone}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">Metro City:</span>
+                  <span className="text-white font-semibold">{customer.city || 'Hyderabad'}</span>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <span className="text-slate-400">Service Address:</span>
+                  <span className="text-white font-semibold text-right max-w-[200px]">{customer.address}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full bg-[#6257ff] text-white font-bold py-3 rounded-xl hover:opacity-90"
+            >
+              Close Record
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 3 PERSONS MULTI-ROLE LOGIN MODAL
+    function AnimatedLoginModal3D({ onClose, onLoginSuccess }) {
+      const [loginRole, setLoginRole] = useState('Customer');
+      const [email, setEmail] = useState('');
+      const [name, setName] = useState('');
+      const [phone, setPhone] = useState('');
+      const [specialization, setSpecialization] = useState('Plumbing');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onLoginSuccess({
+          name: name || (loginRole === 'Mentor' ? 'Dr. Srinivas Rao' : loginRole === 'Technician' ? 'Ramu K.' : 'Alexander Wright'),
+          email: email || `${loginRole.toLowerCase()}@snapservices.in`,
+          phone: phone || '+91 9876543210',
+          role: loginRole,
+          specialization: loginRole === 'Technician' ? specialization : undefined
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+          <div className="relative w-full max-w-md">
+            <div className="relative bg-slate-900 border border-slate-700 rounded-3xl p-8 shadow-2xl backdrop-blur-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-extrabold text-white">Snap Account Portal</h2>
+                <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
+                  <Icon className="w-5 h-5" name="X"/>
+                </button>
+              </div>
+
+              {/* 3 Person Switcher Tabs: 1. Customer 2. Technician 3. Mentor */}
+              <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800 text-xs font-bold">
+                {['Customer', 'Technician', 'Mentor'].map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setLoginRole(role)}
+                    className={`py-2 rounded-xl transition-all ${
+                      loginRole === role ? 'bg-[#6257ff] text-white shadow-md' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder={loginRole === 'Mentor' ? 'Dr. Srinivas Rao' : loginRole === 'Technician' ? 'Ramu K.' : 'Alexander Wright'}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#6257ff]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder={`${loginRole.toLowerCase()}@snapservices.in`}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#6257ff]"
+                  />
+                </div>
+
+                {loginRole === 'Technician' && (
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Primary Specialization</label>
+                    <select
+                      value={specialization}
+                      onChange={(e) => setSpecialization(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                    >
+                      {ALL_SERVICES.map(s => (
+                        <option key={s.id} value={s.category}>{s.category}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Mobile Phone</label>
+                  <input
+                    type="text"
+                    placeholder="+91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#6257ff]"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-[#6257ff] to-[#ff725e] text-white font-bold py-3.5 rounded-2xl shadow-lg mt-2 text-xs"
+                >
+                  Authenticate as {loginRole}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
