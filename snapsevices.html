@@ -376,7 +376,7 @@
           category: activeServiceForWorkers.category
         };
 
-        setOrders([newOrder, ...orders]);
+        setOrders(prevOrders => [newOrder, ...prevOrders]);
         setSelectedWorkerForBooking(null);
         setSelectedWorkerForDetails(null);
         setSelectedWorkers([]);
@@ -414,7 +414,7 @@
       };
 
       const handleAddNewWorkerByMentor = (newWorkerObj) => {
-        setWorkerDatabase([newWorkerObj, ...workerDatabase]);
+        setWorkerDatabase(prevWorkers => [newWorkerObj, ...prevWorkers]);
         showNotification(`New worker ${newWorkerObj.name} successfully onboarded and assigned!`);
       };
 
@@ -580,7 +580,7 @@
                 )}
 
                 {activeTab === 'orders' && (
-                  <OrdersPageView orders={orders} selectedCity={selectedCity} setSelectedCustomerForModal={setSelectedCustomerForModal} onCancelOrder={(id) => setOrders(orders.map(o => o.id === id ? { ...o, status: 'Cancelled' } : o))}
+                  <OrdersPageView orders={orders} selectedCity={selectedCity} setSelectedCustomerForModal={setSelectedCustomerForModal} onCancelOrder={(id) => setOrders(prevOrders => prevOrders.map(o => o.id === id ? { ...o, status: 'Cancelled' } : o))}
                   />
                 )}
 
@@ -608,7 +608,10 @@
           {selectedWorkerForDetails && currentPortalRole === 'consumer' && (
             <WorkerDetailsModal selectedWorkers={selectedWorkers} worker={selectedWorkerForDetails} onClose={() => setSelectedWorkerForDetails(null)}
               onSelectWorkerForDetails={(worker) => setSelectedWorkerForDetails(worker)}
-              onProceedToBooking={(worker) => setSelectedWorkerForBooking(worker)}
+              onProceedToBooking={(worker) => {
+                setSelectedWorkerForDetails(null);
+                setSelectedWorkerForBooking(worker);
+              }}
             />
           )}
 
@@ -1267,10 +1270,10 @@
 
       const toggleSelectWorker = (worker) => {
         if (selectedWorkers.some(w => w.id === worker.id)) {
-          setSelectedWorkers(selectedWorkers.filter(w => w.id !== worker.id));
+          setSelectedWorkers(prev => prev.filter(w => w.id !== worker.id));
         } else {
           if (selectedWorkers.length >= 3) return;
-          setSelectedWorkers([...selectedWorkers, worker]);
+          setSelectedWorkers(prev => prev.length >= 3 ? prev : [...prev, worker]);
         }
       };
 
